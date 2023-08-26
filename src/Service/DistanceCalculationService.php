@@ -9,14 +9,15 @@ use App\CodeAssignmentDistance\Service\ApiClient;
 class DistanceCalculationService
 {
     public function __construct(
+        public readonly array $listOfAddresses,
+        public readonly string $googleApiHost,
         private readonly ApiClient $apiClient
     ) {
     }
 
     public function calculateDistance()
     {
-        $url = ''; /** TODO */
-        $response = $this->apiClient->doGetRequest('GET', $url);
+        $response = $this->apiClient->doGetRequest('GET', $this->googleApiHost);
 
         return $response;
     }

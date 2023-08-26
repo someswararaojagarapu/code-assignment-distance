@@ -19,6 +19,9 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
-
+    App\CodeAssignmentDistance\Service\DistanceCalculationService:
+        arguments:
+            - '%env(json:LIST_OF_ADDRESS)%'
+            - '%env(GOOGLE_MAP_API_HOST)%'
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
