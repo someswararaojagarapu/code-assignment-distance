@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\CodeAssignmentDistance;
 
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
