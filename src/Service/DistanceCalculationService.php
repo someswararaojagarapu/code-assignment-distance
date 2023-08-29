@@ -55,12 +55,12 @@ class DistanceCalculationService
 
     public function getGeoCodeUrl(string $address):string
     {
-    return sprintf(
-        '%s?address=%s&key=%s',
-        $this->geoCodingApiHost,
-        urlencode($address),
-        $this->googleMapApiKey
-    );
+        return sprintf(
+            '%s?address=%s&key=%s',
+            $this->geoCodingApiHost,
+            $address,
+            $this->googleMapApiKey
+        );
     }
 
     public function getDistanceMatrixUrl(string $address, string $destinationAddress): string
@@ -68,8 +68,8 @@ class DistanceCalculationService
         return sprintf(
             '%s?origins=%s&destinations=%s&key=%s',
             $this->googleMapApiHost,
-            urlencode($address),
-            urlencode($destinationAddress),
+            $address,
+            $destinationAddress,
             $this->googleMapApiKey
         );
     }
@@ -87,15 +87,25 @@ class DistanceCalculationService
             {
                 $distanceValue = $responseBody['rows'][0]['elements'][0]['distance']['value'];
                 $distance = sprintf('%.2f km', $distanceValue / 1000);
-
+                $originAddress = $responseBody['origin_addresses'][0] ?? '';
                 $results[] = [
                     'distance' => $distance,
-                    'name' => '', // You can set the actual name here
-                    'origin_address' => $responseBody['origin_addresses'][0],
+                    'name' => $this->getAddressName($originAddress),
+                    'origin_address' => $originAddress,
                 ];
             }
         }
 
         return $results;
-}
+    }
+
+    private function getAddressName(string $targetAddress): string
+    {
+        foreach ($this->listOfAddresses as $address) {
+            if ($address['address'] === $targetAddress) {
+                return $address['name'];
+            }
+        }
+        return '';
+    }
 }
