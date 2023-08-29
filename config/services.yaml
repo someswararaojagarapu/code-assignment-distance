@@ -6,6 +6,9 @@
 parameters:
     LIST_OF_ADDRESS: '%env(LIST_OF_ADDRESS)%'
     GOOGLE_MAP_API_HOST: '%env(GOOGLE_MAP_API_HOST)%'
+    GOOGLE_GEO_CODE_HOST: '%env(GOOGLE_GEO_CODE_HOST)%'
+    GOOGLE_MAP_API_KEY: '%env(GOOGLE_MAP_API_KEY)%'
+    DESTINATION_ADDRESS: '%env(DESTINATION_ADDRESS)%'
 
 services:
     # default configuration for services in *this* file
@@ -22,8 +25,11 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
     App\CodeAssignmentDistance\Service\DistanceCalculationService:
-        arguments:
-          - '%env(json:LIST_OF_ADDRESS)%'
-          - '%env(GOOGLE_MAP_API_HOST)%'
+      arguments:
+        - '%env(json:LIST_OF_ADDRESS)%'
+        - '%env(GOOGLE_MAP_API_HOST)%'
+        - '%env(GOOGLE_GEO_CODE_HOST)%'
+        - '%env(GOOGLE_MAP_API_KEY)%'
+        - '%env(json:DESTINATION_ADDRESS)%'
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
