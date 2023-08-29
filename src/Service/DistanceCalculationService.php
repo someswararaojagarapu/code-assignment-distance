@@ -18,7 +18,7 @@ class DistanceCalculationService
     ) {
     }
 
-    private function fetchAPIResponse(): array | JsonResponse
+    public function fetchAPIResponse(): array | JsonResponse
     {
         $apiResponseResult = [];
         $inputOriginAddresses = array_column($this->listOfAddresses, 'address');
