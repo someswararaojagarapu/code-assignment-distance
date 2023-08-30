@@ -34,4 +34,5 @@ PHPUnit is used for testing the application. Run the following command to execut
 ./vendor/bin/phpunit
 
 API URL: https://localhost:8000/api/calculate-distances
+
 ## Please note, env and env.test Should set active GOOGLE_MAP_API_KEY to test end-to-end functionality
