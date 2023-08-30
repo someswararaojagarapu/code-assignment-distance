@@ -15,12 +15,12 @@ use Symfony\Component\Routing\Annotation\Route;
 class DistanceController extends AbstractController
 {
     #[Route('/calculate-distances', name: 'calculate-distances', methods: 'GET')]
-    public function index(
+    public function calculateDistance(
         DistanceCalculationService $distanceCalculationService,
         FileReaderManager $fileReaderManager
     ): Response {
         try {
-            $result = $distanceCalculationService->calculateDistance();
+            $result = $distanceCalculationService->sortTheResultsByDistance();
 
             return $fileReaderManager->convertRequiredFormat($result);
         } catch (\Exception $e) {

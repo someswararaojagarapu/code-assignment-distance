@@ -33,7 +33,6 @@ class ApiClient
 
             return [
                 'statusCode' => $response->getStatusCode(),
-//                'headers' => $response->getHeaders(false),
                 'body' => $responseData,
             ];
         } catch (\Exception $e) {

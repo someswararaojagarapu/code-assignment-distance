@@ -33,7 +33,7 @@ class FileReaderManager
         $response = new Response($csvContent);
         $response->headers->set('Content-Encoding', 'UTF-8');
         $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename='. self::FILE_NAME);
+        $response->headers->set('Content-Disposition', 'attachment; filename=' . self::FILE_NAME);
 
         return $response;
     }

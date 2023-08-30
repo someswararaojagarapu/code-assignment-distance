@@ -10,102 +10,112 @@ class DistanceCalculationService
 {
     public function __construct(
         public readonly array $listOfAddresses,
-        public readonly string $googleMapApiHost,
-        public readonly string $geoCodingApiHost,
-        public readonly string $googleMapApiKey,
-        public readonly array $destinationAddress,
-        private readonly ApiResponseService $apiResponseService
+        private readonly GeoLocationService $geoLocationService
     ) {
+    }
+
+    public function sortTheResultsByDistance(): array
+    {
+        $result = $this->calculateDistance();
+        $noPathFoundResults = [];
+        $kmResults = [];
+
+        foreach ($result as $entry) {
+            match ($entry['distance']) {
+            "No Path Found" => $noPathFoundResults[] = $entry,
+                    default => $kmResults[] = $entry,
+                };
+        }
+
+        usort(
+            $kmResults,
+            fn($a, $b) =>
+                (float) str_replace(',', '', $a['distance'])
+                <=>
+                (float) str_replace(',', '', $b['distance'])
+            );
+
+        foreach ($kmResults as &$item) {
+            $item['distance'] = number_format(floatval($item['distance']), 2) . ' km';
+        }
+
+        return [...$kmResults, ...$noPathFoundResults];
     }
 
     public function fetchAPIResponse(): array | JsonResponse
     {
         $apiResponseResult = [];
-        $inputOriginAddresses = array_column($this->listOfAddresses, 'address');
-        $destinationAddress = array_column($this->destinationAddress, 'address')[0];
-
-        if (!$destinationAddress) {
-            return new JsonResponse(['error' => 'Please set Destination Address in env.'], 401);
-        }
-        $errorAddress = [];
-        //                $originGeocodingResponse = $this->apiResponseService->fetchAPIResponse($this->getGeoCodeUrl($originAddress));
-        foreach ($inputOriginAddresses as $originAddress) {
+        $destinationLatitudeLongitudeValues = $this->geoLocationService->destinationLatitudeLongitudeValues();
+        $destinationLatitudeLongitude = "{$destinationLatitudeLongitudeValues['lat']},{$destinationLatitudeLongitudeValues['lng']}";
+        $originLatitudeLongitudeValues = $this->getOriginLatitudeLongitudeValues();
+        foreach ($originLatitudeLongitudeValues as $name => $originLatitudeLongitudeValue) {
             try {
-                $apiResponseResult[] = $this->apiResponseService->fetchAPIResponse($this->getDistanceMatrixUrl($originAddress, $destinationAddress));
+                $originLatitudeLongitudeValue = "{$originLatitudeLongitudeValue['lat']},{$originLatitudeLongitudeValue['lng']}";
+                $apiResponseResult[$name] = $this->geoLocationService->getDistanceMatrixResult(
+                    $destinationLatitudeLongitude,
+                    $originLatitudeLongitudeValue
+                );
             } catch (\InvalidArgumentException $e) {
-                $errorAddress[] = $originAddress;
-//                return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+                return ['code' => $e->getCode(), 'errorMessage' => $e->getMessage()];
             }
         }
 
-        return [
-            'apiResponseResult' => $apiResponseResult,
-            'errorAddress' => $errorAddress,
-        ];
+        return $apiResponseResult;
     }
 
-//    public function fetchGeoCode(string $url)
-//    {
-//        // Get geolocation for the origin address
-//        $originGeocodingResponse = $geocodingClient->get('https://maps.googleapis.com/maps/api/geocode/json', [
-//            'query' => ['address' => $originAddress, 'key' => $apiKey],
-//        ]);
-//        $originGeocodingData = json_decode($originGeocodingResponse->getBody()->getContents());
-//    }
-
-    public function getGeoCodeUrl(string $address):string
+    public function getOriginLatitudeLongitudeValues(): array
     {
-        return sprintf(
-            '%s?address=%s&key=%s',
-            $this->geoCodingApiHost,
-            $address,
-            $this->googleMapApiKey
-        );
-    }
+        $originAddressResult = [];
 
-    public function getDistanceMatrixUrl(string $address, string $destinationAddress): string
-    {
-        return sprintf(
-            '%s?origins=%s&destinations=%s&key=%s',
-            $this->googleMapApiHost,
-            $address,
-            $destinationAddress,
-            $this->googleMapApiKey
-        );
+        foreach ($this->listOfAddresses as $originNameAndAddress) {
+            try {
+                $name = $originNameAndAddress['name'] ?? '';
+                $originAddress = $originNameAndAddress['address'] ?? '';
+                $geoLocation = $this->geoLocationService->getGeoLocation($originAddress);
+                $originAddressResult[$name] = ['lat' => $geoLocation['lat'], 'lng' => $geoLocation['lng']];
+            } catch (\InvalidArgumentException $e) {
+                return ['code' => $e->getCode(), 'errorMessage' => $e->getMessage()];
+            }
+        }
+
+        return $originAddressResult;
     }
 
     public function calculateDistance(): array
     {
         $results = [];
-        $apiResponseResult = $this->fetchAPIResponse()['apiResponseResult'] ?? [];
+        $apiResponseResult = $this->fetchAPIResponse() ?? [];
 
-        foreach ($apiResponseResult as $response) {
+        foreach ($apiResponseResult as $name => $response) {
             $responseBody = $response['body'];
-            if (
-                $responseBody['status'] === 'OK' &&
-                isset($responseBody['rows'][0]['elements'][0]['distance']['value']))
-            {
+            $originAddress = $responseBody['origin_addresses'][0] ?? '';
+            $status = $responseBody['status'] ?? '';
+
+            if ($status === 'OK' && isset($responseBody['rows'][0]['elements'][0]['distance']['value'])) {
                 $distanceValue = $responseBody['rows'][0]['elements'][0]['distance']['value'];
-                $distance = sprintf('%.2f km', $distanceValue / 1000);
-                $originAddress = $responseBody['origin_addresses'][0] ?? '';
-                $results[] = [
-                    'distance' => $distance,
-                    'name' => $this->getAddressName($originAddress),
-                    'origin_address' => $originAddress,
-                ];
+                $distance = bcdiv((string) $distanceValue, '1000', 5);
+            } else {
+                $distance = 'No Path Found';
+                $originAddress = $this->getOriginAddress($name);
             }
+
+            $results[] = [
+                'distance' => $distance,
+                'name' => $name,
+                'origin_address' => $originAddress,
+            ];
         }
 
         return $results;
     }
 
-    private function getAddressName(string $targetAddress): string
+    private function getOriginAddress(string $targetName): string
     {
-        foreach ($this->listOfAddresses as $address) {
-            if ($address['address'] === $targetAddress) {
-                return $address['name'];
-            }
+    foreach ($this->listOfAddresses as $item) {
+        if ($item['name'] === $targetName) {
+            return $item['address'];
         }
-        return '';
+    }
+    return '';
     }
 }
