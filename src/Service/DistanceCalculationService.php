@@ -26,7 +26,6 @@ class DistanceCalculationService
                     default => $kmResults[] = $entry,
                 };
         }
-
         usort(
             $kmResults,
             fn($a, $b) =>
@@ -39,7 +38,14 @@ class DistanceCalculationService
             $item['distance'] = number_format(floatval($item['distance']), 2) . ' km';
         }
 
-        return [...$kmResults, ...$noPathFoundResults];
+        $distanceResult = [...$kmResults, ...$noPathFoundResults];
+        $sortNumber = 1;
+        foreach ($distanceResult as &$item) {
+            $item['sortnumber'] = $sortNumber;
+            $sortNumber++;
+        }
+
+        return $distanceResult;
     }
 
     public function fetchAPIResponse(): array | JsonResponse
